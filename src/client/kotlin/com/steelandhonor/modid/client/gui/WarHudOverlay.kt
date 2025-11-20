@@ -60,24 +60,20 @@ object WarHudOverlay {
         synchronized(wars) {
             for (i in wars.indices) {
                 val war = wars[i]
-                var updated = war
-                if (war.prepSecondsRemaining > 0) {
-                    updated = updated.copy(
-                        prepSecondsRemaining = (war.prepSecondsRemaining - 1).coerceAtLeast(0)
-                    )
+                val updated = if (war.prepSecondsRemaining > 0) {
+                    war.copy(prepSecondsRemaining = (war.prepSecondsRemaining - 1).coerceAtLeast(0))
                 } else if (war.secondsRemaining > 0) {
-                    updated = updated.copy(
-                        secondsRemaining = (war.secondsRemaining - 1).coerceAtLeast(0)
-                    )
+                    war.copy(secondsRemaining = (war.secondsRemaining - 1).coerceAtLeast(0))
+                } else {
+                    war
                 }
                 wars[i] = updated
             }
         }
     }
 
-    fun isWarActive(): Boolean {
-        return synchronized(wars) { wars.isNotEmpty() }
-    }
+    fun isWarActive(): Boolean =
+        synchronized(wars) { wars.isNotEmpty() }
 
     fun getWarOverlayBottom(): Int {
         if (!isWarActive()) return 0
@@ -91,7 +87,6 @@ object WarHudOverlay {
 
         val x = (context.scaledWindowWidth - PANEL_WIDTH) / 2
         val y = 6
-
         val background = 0xC0101010.toInt()
         val border = 0xFF0A0A0A.toInt()
 
@@ -102,67 +97,34 @@ object WarHudOverlay {
 
         val attackerColor = toColor(war.attackerColorId)
         val defenderColor = toColor(war.defenderColorId)
+        val header = Text.translatable("text.steel_and_honor.hud.war.title", war.attackerName, war.defenderName)
+        val kills = Text.translatable("text.steel_and_honor.hud.war.kills", war.attackerKills, war.defenderKills)
 
-        val header = Text.translatable(
-            "text.steel_and_honor.hud.war.title",
-            war.attackerName,
-            war.defenderName
-        )
-        val kills = Text.translatable(
-            "text.steel_and_honor.hud.war.kills",
-            war.attackerKills,
-            war.defenderKills
-        )
-        val scoreText = Text.literal("Score ${war.attackerScore} : ${war.defenderScore}")
-
-        val prepTimerText = Text.translatable(
-            "text.steel_and_honor.hud.war.prep_timer",
-            formatTime(war.prepSecondsRemaining)
-        )
-        val warTimerText = Text.translatable(
-            "text.steel_and_honor.hud.war.timer",
-            formatTime(war.secondsRemaining)
-        )
+        val prepTimerText =
+            Text.translatable("text.steel_and_honor.hud.war.prep_timer", formatTime(war.prepSecondsRemaining))
+        val warTimerText =
+            Text.translatable("text.steel_and_honor.hud.war.timer", formatTime(war.secondsRemaining))
         val combinedTimer = Text.literal("${prepTimerText.string} | ${warTimerText.string}")
 
-        // Text layout
         context.drawText(textRenderer, header, x + 10, y + 4, 0xFFFFFF, false)
         context.drawText(textRenderer, kills, x + 10, y + 16, attackerColor, false)
-        context.drawText(textRenderer, scoreText, x + 10, y + 26, 0xFFFFFF, false)
 
         val timerWidth = textRenderer.getWidth(combinedTimer)
-        context.drawText(
-            textRenderer,
-            combinedTimer,
-            x + PANEL_WIDTH - timerWidth - 12,
-            y + 16,
-            defenderColor,
-            false
-        )
+        context.drawText(textRenderer, combinedTimer, x + PANEL_WIDTH - timerWidth - 12, y + 16, defenderColor, false)
 
         // Capture bar under the panel if there is an active city
         if (war.activeCityName.isNotEmpty() && war.captureProgress > 0f) {
             val barX = x + 10
             val barY = y + PANEL_HEIGHT - 8
             val barWidth = PANEL_WIDTH - 20
-            val clampedProgress = war.captureProgress.coerceIn(0f, 1f)
-            val filled = (barWidth * clampedProgress).roundToInt()
+            val filled = (barWidth * war.captureProgress.coerceIn(0f, 1f)).roundToInt()
 
-            // Bar background
             context.fill(barX, barY, barX + barWidth, barY + 3, 0xFF202020.toInt())
-            // Filled portion
             context.fill(barX, barY, barX + filled, barY + 3, 0xFFAA0000.toInt())
 
             val label = Text.literal("Capturing ${war.activeCityName}")
             val labelWidth = textRenderer.getWidth(label)
-            context.drawText(
-                textRenderer,
-                label,
-                barX + (barWidth - labelWidth) / 2,
-                barY - 9,
-                0xFFFFFF,
-                false
-            )
+            context.drawText(textRenderer, label, barX + (barWidth - labelWidth) / 2, barY - 9, 0xFFFFFF, false)
         }
     }
 
