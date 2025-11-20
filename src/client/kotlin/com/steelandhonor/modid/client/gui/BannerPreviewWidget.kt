@@ -3,7 +3,6 @@ package com.steelandhonor.modid.client.gui
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationData
 import net.minecraft.item.ItemStack
 
 class BannerPreviewWidget(
@@ -24,6 +23,6 @@ class BannerPreviewWidget(
     }
 
     override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationData.Part.TITLE, this.message)
+        builder.put(NarrationMessageBuilder.Section.TITLE, this.message)
     }
 }
