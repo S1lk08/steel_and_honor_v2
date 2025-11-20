@@ -131,7 +131,7 @@
   "text.steel_and_honor.hud.wilderness_subtitle": "Undeclared frontier",
   "text.steel_and_honor.hud.departing": "Departing %s",
   "text.steel_and_honor.hud.war.title": "War: %s vs %s",
-  "text.steel_and_honor.hud.war.kills": "Kills %s : %s",
+  "text.steel_and_honor.hud.war.kills": "Points %s : %s",
   "text.steel_and_honor.hud.war.timer": "Time Left %s",
   "text.steel_and_honor.hud.war.prep_timer": "Prep: %s",
   "item.steel_and_honor.royal_crown": "Royal Crown Decoration"

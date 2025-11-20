@@ -11,8 +11,8 @@ import net.minecraft.client.gui.widget.TextFieldWidget
 import net.minecraft.text.Text
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.title")) {
     private var currentPage = MenuPage.HOME

@@ -36,8 +36,8 @@ object KingdomManager {
     private const val MAX_NAME_LENGTH = 32
     private val KINGDOM_NAME_PATTERN = Regex("^[A-Za-z0-9 .,'-]+$")
     private const val GENERIC_PERMISSION_KEY = "command.steel_and_honor.kingdom.no_permission"
-    const val WAR_PREP_TIME_TICKS = 20 * 60 * 15L // 15 minutes prep time
-    const val WAR_DURATION_TICKS = 20 * 60 * 25L // 25 minutes war duration
+    const val WAR_PREP_TIME_TICKS = 20 * 60 * 20L // 20 minutes prep time
+    const val WAR_DURATION_TICKS = 20 * 60 * 90L // 90 minutes war duration
     private const val WAR_HUD_INTERVAL_TICKS = 20
 
     private var borderDirty = true
@@ -703,23 +703,40 @@ object KingdomManager {
         return Text.translatable("command.steel_and_honor.kingdom.status.kingdom", data.name)
     }
 
-    fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
-        val killerOwner = memberLookup[killer.uuid] ?: return
-        val victimOwner = memberLookup[victim.uuid] ?: return
-        if (killerOwner == victimOwner) return
-        val war = wars.firstOrNull { it.includes(killerOwner) && it.includes(victimOwner) } ?: return
-        val killerSide = war.sideOf(killerOwner) ?: return
-        val victimSide = war.sideOf(victimOwner) ?: return
-        if (killerSide == victimSide) return
-        // Don't count kills during prep time
-        val now = killer.server.overworld.time
-        if (war.prepTimeRemaining(now) > 0L) return
-        // Don't count kills of civilians or politicians
-        val victimRole = getRole(victim.uuid)
-        if (victimRole == KingdomRole.CITIZEN || victimRole == KingdomRole.POLITICIAN) return
-        war.incrementKill(killerSide)
-        dirty = true
+fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
+    val killerOwner = memberLookup[killer.uuid] ?: return
+    val victimOwner = memberLookup[victim.uuid] ?: return
+    if (killerOwner == victimOwner) return
+
+    val war = wars.firstOrNull { it.includes(killerOwner) && it.includes(victimOwner) } ?: return
+    val killerSide = war.sideOf(killerOwner) ?: return
+    val victimSide = war.sideOf(victimOwner) ?: return
+    if (killerSide == victimSide) return
+
+    // Don't count kills during prep time
+    val now = killer.server.overworld.time
+    if (war.prepTimeRemaining(now) > 0L) return
+
+    val victimRole = getRole(victim.uuid)
+
+    // Citizen kills never count
+    if (victimRole == KingdomRole.CITIZEN) return
+
+    // Role → points mapping
+    val points = when (victimRole) {
+        KingdomRole.MILITARY   -> 25
+        KingdomRole.POLITICIAN -> 50
+        KingdomRole.OFFICER    -> 150
+        KingdomRole.LEADER     -> 500
+        else                   -> 0
     }
+
+    if (points <= 0) return
+
+    // These "kills" fields now represent the WAR SCORE (points)
+    war.addPoints(killerSide, points)
+    dirty = true
+}
 
     private fun sanitizeKingdomName(value: String): String {
         val name = value.trim()
@@ -769,34 +786,39 @@ object KingdomManager {
         val defender = kingdoms[war.defender]
         val attackerName = attacker?.name ?: "Unknown"
         val defenderName = defender?.name ?: "Unknown"
-        val winner = when {
-            war.attackerKills > war.defenderKills -> WarSide.ATTACKER
-            war.defenderKills > war.attackerKills -> WarSide.DEFENDER
-            else -> null
-        }
-        val message = when (winner) {
-            WarSide.ATTACKER -> Text.translatable(
-                "command.steel_and_honor.kingdom.war.victory",
-                attackerName,
-                defenderName,
-                war.attackerKills,
-                war.defenderKills
-            )
-            WarSide.DEFENDER -> Text.translatable(
-                "command.steel_and_honor.kingdom.war.victory",
-                defenderName,
-                attackerName,
-                war.defenderKills,
-                war.attackerKills
-            )
-            null -> Text.translatable(
-                "command.steel_and_honor.kingdom.war.draw",
-                attackerName,
-                defenderName,
-                war.attackerKills,
-                war.defenderKills
-            )
-        }
+    val attackerScore = war.attackerKills
+    val defenderScore = war.defenderKills
+
+    val winner = when {
+        attackerScore > defenderScore -> WarSide.ATTACKER
+        defenderScore > attackerScore -> WarSide.DEFENDER
+        else -> null
+    }
+
+    val message = when (winner) {
+        WarSide.ATTACKER -> Text.translatable(
+            "command.steel_and_honor.kingdom.war.victory",
+            attackerName,
+            defenderName,
+            attackerScore,
+            defenderScore
+        )
+        WarSide.DEFENDER -> Text.translatable(
+            "command.steel_and_honor.kingdom.war.victory",
+            defenderName,
+            attackerName,
+            defenderScore,
+            attackerScore
+        )
+        null -> Text.translatable(
+            "command.steel_and_honor.kingdom.war.draw",
+            attackerName,
+            defenderName,
+            attackerScore,
+            defenderScore
+        )
+    }
+
         attacker?.let { notifyMembers(server, it, message) }
         defender?.let { notifyMembers(server, it, message) }
         war.attackerAllies.forEach { allyOwner ->
@@ -907,10 +929,11 @@ data class WarState(
         return if (side == WarSide.ATTACKER) defender else attacker
     }
 
-    fun incrementKill(side: WarSide) {
+    fun addPoints(side: WarSide, amount: Int) {
+        if (amount <= 0) return
         when (side) {
-            WarSide.ATTACKER -> attackerKills++
-            WarSide.DEFENDER -> defenderKills++
+            WarSide.ATTACKER -> attackerKills += amount
+            WarSide.DEFENDER -> defenderKills += amount
         }
     }
 
