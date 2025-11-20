@@ -38,6 +38,24 @@ object OpenPacClaimService {
         }
     }
 
+fun transferCityClaims(
+    server: MinecraftServer,
+    from: KingdomData,
+    to: KingdomData,
+    city: WarCity
+) {
+    // TODO: Implement real claim transfer via OpenPAC
+}
+
+fun transferAllClaimsTo(
+    server: MinecraftServer,
+    from: KingdomData,
+    to: KingdomData
+) {
+    // TODO: Implement full kingdom claim transfer via OpenPAC
+}
+
+
     fun collectSnapshots(
         server: MinecraftServer,
         kingdoms: Collection<KingdomData>,
