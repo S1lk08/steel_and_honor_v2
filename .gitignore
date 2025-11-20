@@ -1,0 +1,56 @@
+# Gradle
+.gradle/
+build/
+!build/libs/
+!build/libs/*.jar
+.gradletasknamecache
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Eclipse
+bin/
+.metadata
+
+# IntelliJ IDEA
+out/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Minecraft
+run/
+logs/
+*.log
+crash-reports/
+debug.log
+latest.log
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+*.cache
+
+# Build artifacts
+*.class
+*.jar
+!build/libs/*.jar
+
+# Yarn mappings (if not needed in repo)
+yarn-1.21.1/
+
+# Local development
+local/
+*.local

@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "package": "com.steelandhonor.modid.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "com.steelandhonor.modid.client.mixin.SteelAndHonorMixinPlugin",
+  "mixins": [],
+  "client": [
+    "XaeroWorldMapSessionMixin",
+    "InGameHudMixin",
+    "ClaimsHighlighterMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

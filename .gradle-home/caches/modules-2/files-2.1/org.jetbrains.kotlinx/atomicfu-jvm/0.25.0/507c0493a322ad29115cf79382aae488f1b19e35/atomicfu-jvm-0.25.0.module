@@ -1,0 +1,93 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../atomicfu/0.25.0/atomicfu-0.25.0.module",
+    "group": "org.jetbrains.kotlinx",
+    "module": "atomicfu",
+    "version": "0.25.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.7"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "atomicfu-jvm-0.25.0.jar",
+          "url": "atomicfu-jvm-0.25.0.jar",
+          "size": 36084,
+          "sha512": "3462bd7b2cc9222ddc164b330d3c2594712458c3e92d592ac97fe11f77eb1bed479f1a553ae482c2934f51c3c15ed370fa7f57292ddc0d71db4272a6041d69fb",
+          "sha256": "91990ec8a7b6b6ad2609fd81d6f3feb08ca695c7502958a0bd61e8a3af2650cb",
+          "sha1": "c8686b7f79a65516610b1ce4965bb450084075f2",
+          "md5": "6ba0d6bbe43503ad46852c798af81964"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "prefers": "2.0.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "atomicfu-jvm-0.25.0.jar",
+          "url": "atomicfu-jvm-0.25.0.jar",
+          "size": 36084,
+          "sha512": "3462bd7b2cc9222ddc164b330d3c2594712458c3e92d592ac97fe11f77eb1bed479f1a553ae482c2934f51c3c15ed370fa7f57292ddc0d71db4272a6041d69fb",
+          "sha256": "91990ec8a7b6b6ad2609fd81d6f3feb08ca695c7502958a0bd61e8a3af2650cb",
+          "sha1": "c8686b7f79a65516610b1ce4965bb450084075f2",
+          "md5": "6ba0d6bbe43503ad46852c798af81964"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "atomicfu-jvm-0.25.0-sources.jar",
+          "url": "atomicfu-jvm-0.25.0-sources.jar",
+          "size": 10685,
+          "sha512": "e7f18fb712aad7c2c69647ce7aca2f96ae1fa4f7a9e28641615a4283cbce487a4023a70a48ddf6d6d8e810353e9fb218eb6153798181f2d82fe17cd4e60ccb16",
+          "sha256": "52422af0b42b22753f6df7e0ce85c636f2bb08f3d874e88545a324876186e958",
+          "sha1": "95cc2102d64063398b01f5ffd789fae8c9f45719",
+          "md5": "939f4ecdf150d0645acc9149a6afa79c"
+        }
+      ]
+    }
+  ]
+}

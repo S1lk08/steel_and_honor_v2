@@ -1,0 +1,138 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "url": "../../kotlinx-serialization-cbor/1.7.3/kotlinx-serialization-cbor-1.7.3.module",
+    "group": "org.jetbrains.kotlinx",
+    "module": "kotlinx-serialization-cbor",
+    "version": "1.7.3",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.7"
+    }
+  },
+  "variants": [
+    {
+      "name": "jvmApiElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-serialization-bom",
+          "version": {
+            "requires": "1.7.3"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.20"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-serialization-core",
+          "version": {
+            "requires": "1.7.3"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "kotlinx-serialization-cbor-jvm-1.7.3.jar",
+          "url": "kotlinx-serialization-cbor-jvm-1.7.3.jar",
+          "size": 65296,
+          "sha512": "16355a0b046f5415c2a71d8632b8f66e21798e490a9308a64edba470bd5056f4c877e85521038f68a63b885535db30f9b666c7c5405e8e5a063c9567f1e1ae8b",
+          "sha256": "ec45d74e2293eacbc1f804f3ec55d4908f9905ac5053316b565f1b66326f1f70",
+          "sha1": "3d8ffef8d3ebba6c627096312afda71463508852",
+          "md5": "c7517f495cbbec7258047197d329dbc4"
+        }
+      ]
+    },
+    {
+      "name": "jvmRuntimeElements-published",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-serialization-bom",
+          "version": {
+            "requires": "1.7.3"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.0.20"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-serialization-core",
+          "version": {
+            "requires": "1.7.3"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "kotlinx-serialization-cbor-jvm-1.7.3.jar",
+          "url": "kotlinx-serialization-cbor-jvm-1.7.3.jar",
+          "size": 65296,
+          "sha512": "16355a0b046f5415c2a71d8632b8f66e21798e490a9308a64edba470bd5056f4c877e85521038f68a63b885535db30f9b666c7c5405e8e5a063c9567f1e1ae8b",
+          "sha256": "ec45d74e2293eacbc1f804f3ec55d4908f9905ac5053316b565f1b66326f1f70",
+          "sha1": "3d8ffef8d3ebba6c627096312afda71463508852",
+          "md5": "c7517f495cbbec7258047197d329dbc4"
+        }
+      ]
+    },
+    {
+      "name": "jvmSourcesElements-published",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "kotlinx-serialization-cbor-jvm-1.7.3-sources.jar",
+          "url": "kotlinx-serialization-cbor-jvm-1.7.3-sources.jar",
+          "size": 24158,
+          "sha512": "33d468d05685ad9cafa59e6ec0d938796e19b2ae95420912a0bf8ce59e18b948aa3375047062fc2b2524f2025f21fdd699d146bd3207dc7dbe630498ed08ba05",
+          "sha256": "91ac6c3b6539c6bbdfc1a3713c9068056f990a930fae192ac9d868fd0253586e",
+          "sha1": "09d159d98f5df4c1f2eddffef11158fd3c0cf593",
+          "md5": "2664078278d6a66837aadd2e888e219b"
+        }
+      ]
+    }
+  ]
+}
