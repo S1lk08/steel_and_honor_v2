@@ -809,12 +809,15 @@ class PulsingButtonWidget(
 
     override fun renderWidget(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
         tick++
+
         val pulse = ((Math.sin(tick.toDouble()) + 1.0) / 2.0).toFloat()
         val alpha = if (active) (60 + pulse * 60).toInt() else 40
         val color = (alpha shl 24) or 0xFFAA4444.toInt()
 
+        // Draw pulsing background
         context.fill(x - 2, y - 2, x + width + 2, y + height + 2, color)
 
+        // Correct super call for 1.21.3
         super.renderWidget(context, mouseX, mouseY, delta)
     }
 }
@@ -844,18 +847,20 @@ class SurrenderConfirmScreen(private val parent: Screen) :
         addDrawableChild(cancelBtn)
     }
 
-    override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
-        this.renderBackground(context)
-        super.render(context, mouseX, mouseY, delta)
+override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+    this.renderBackground(context)
 
-        context.drawCenteredTextWithShadow(
-            textRenderer,
-            Text.translatable("screen.steel_and_honor.menu.war.surrender.prompt"),
-            width / 2,
-            height / 2 - 40,
-            0xFFFFFF
-        )
-    }
+    // FIXED: added missing delta argument
+    super.render(context, mouseX, mouseY, delta)
+
+    context.drawCenteredTextWithShadow(
+        textRenderer,
+        Text.translatable("screen.steel_and_honor.menu.war.surrender.prompt"),
+        width / 2,
+        height / 2 - 40,
+        0xFFFFFF
+    )
+}
 
     override fun shouldPause() = false
 }
