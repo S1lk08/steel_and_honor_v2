@@ -346,4 +346,7 @@ override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
         val payload = SyncWarResultPayload(result)
         ServerPlayNetworking.send(player, payload)
     }
+
+    fun getWars(): List<War> = wars.toList()
+
 }
