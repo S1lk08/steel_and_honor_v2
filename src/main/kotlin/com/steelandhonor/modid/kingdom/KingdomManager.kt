@@ -1039,6 +1039,56 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
         return name
     }
 
+        /**
+     * Sends the final war result to all participants so the client can:
+     * - play horn + particles + title for ~5s
+     * - then open the WarResultScreen.
+     */
+    private fun broadcastWarResult(
+        server: MinecraftServer,
+        war: WarState,
+        winner: WarSide?,
+        attackerCityCaptures: Int,
+        defenderCityCaptures: Int
+    ) {
+        val attackerData = kingdoms[war.attacker] ?: return
+        val defenderData = kingdoms[war.defender] ?: return
+
+        val winnerSideInt = when (winner) {
+            null -> 0
+            WarSide.ATTACKER -> 1
+            WarSide.DEFENDER -> 2
+        }
+
+        val result = KingdomNetworking.WarResultEntry(
+            attackerName = attackerData.name,
+            defenderName = defenderData.name,
+            winnerSide = winnerSideInt,
+            attackerScore = war.attackerScore,
+            defenderScore = war.defenderScore,
+            attackerKills = war.attackerKills,
+            defenderKills = war.defenderKills,
+            attackerCityCaptures = attackerCityCaptures,
+            defenderCityCaptures = defenderCityCaptures
+        )
+
+        // Everyone directly involved (primary kingdoms + allies on both sides)
+        val allOwners = buildSet {
+            add(war.attacker)
+            add(war.defender)
+            addAll(war.attackerAllies)
+            addAll(war.defenderAllies)
+        }
+
+        allOwners.forEach { ownerId ->
+            val kingdom = kingdoms[ownerId] ?: return@forEach
+            kingdom.members.forEach { memberId ->
+                val player = server.playerManager.getPlayer(memberId) ?: return@forEach
+                KingdomNetworking.sendWarResult(player, result)
+            }
+        }
+    }
+
     private fun applyToMembers(server: MinecraftServer, kingdom: KingdomData) {
         kingdom.members.forEach { uuid ->
             server.playerManager.getPlayer(uuid)?.let {
@@ -1314,71 +1364,127 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
     // RESOLVING WARS / ABSORPTION / HUD
     // ------------------------------
 
-private fun resolveWar(
-    server: MinecraftServer,
-    war: WarState,
-    forcedWinner: WarSide? = null,
-    surrendered: Boolean = false
-) {
-    val attacker = kingdoms[war.attacker]
-    val defender = kingdoms[war.defender]
-    val attackerName = attacker?.name ?: "Unknown"
-    val defenderName = defender?.name ?: "Unknown"
+    private fun resolveWar(
+        server: MinecraftServer,
+        war: WarState,
+        forcedWinner: WarSide? = null,
+        surrendered: Boolean = false
+    ) {
+        val attacker = kingdoms[war.attacker]
+        val defender = kingdoms[war.defender]
+        val attackerName = attacker?.name ?: "Unknown"
+        val defenderName = defender?.name ?: "Unknown"
 
-    // Auto-win (all cities captured) or forcedWinner (surrender) beats points
-    val autoWinner = forcedWinner ?: war.autoWinSide()
-    val winner = autoWinner ?: when {
-        war.attackerScore > war.defenderScore -> WarSide.ATTACKER
-        war.defenderScore > war.attackerScore -> WarSide.DEFENDER
-        else -> null
-    }
+        // Auto-win (all cities captured) or forcedWinner (surrender) beats points
+        val autoWinner = forcedWinner ?: war.autoWinSide()
+        val winner = autoWinner ?: when {
+            war.attackerScore > war.defenderScore -> WarSide.ATTACKER
+            war.defenderScore > war.attackerScore -> WarSide.DEFENDER
+            else -> null
+        }
 
-    val message = when (winner) {
-        WarSide.ATTACKER -> Text.translatable(
-            "command.steel_and_honor.kingdom.war.victory",
-            attackerName,
-            defenderName,
-            war.attackerScore,
-            war.defenderScore
+        val message = when (winner) {
+            WarSide.ATTACKER -> Text.translatable(
+                "command.steel_and_honor.kingdom.war.victory",
+                attackerName,
+                defenderName,
+                war.attackerScore,
+                war.defenderScore
+            )
+            WarSide.DEFENDER -> Text.translatable(
+                "command.steel_and_honor.kingdom.war.victory",
+                defenderName,
+                attackerName,
+                war.defenderScore,
+                war.attackerScore
+            )
+            null -> Text.translatable(
+                "command.steel_and_honor.kingdom.war.draw",
+                attackerName,
+                defenderName,
+                war.attackerScore,
+                war.defenderScore
+            )
+        }
+
+        attacker?.let { notifyMembers(server, it, message) }
+        defender?.let { notifyMembers(server, it, message) }
+        war.attackerAllies.forEach { allyOwner ->
+            kingdoms[allyOwner]?.let { notifyMembers(server, it, message) }
+        }
+        war.defenderAllies.forEach { allyOwner ->
+            kingdoms[allyOwner]?.let { notifyMembers(server, it, message) }
+        }
+
+        // Compute city capture counts for each side
+        val attackerCityCaptures = war.cities.count {
+            it.capturedBy == WarSide.ATTACKER && it.originalSide == WarSide.DEFENDER
+        }
+        val defenderCityCaptures = war.cities.count {
+            it.capturedBy == WarSide.DEFENDER && it.originalSide == WarSide.ATTACKER
+        }
+
+        // Broadcast detailed result (for celebration + result screen)
+        broadcastWarResult(
+            server = server,
+            war = war,
+            winner = winner,
+            attackerCityCaptures = attackerCityCaptures,
+            defenderCityCaptures = defenderCityCaptures
         )
-        WarSide.DEFENDER -> Text.translatable(
-            "command.steel_and_honor.kingdom.war.victory",
-            defenderName,
-            attackerName,
-            war.defenderScore,
-            war.attackerScore
-        )
-        null -> Text.translatable(
-            "command.steel_and_honor.kingdom.war.draw",
-            attackerName,
-            defenderName,
-            war.attackerScore,
-            war.defenderScore
-        )
-    }
 
-    attacker?.let { notifyMembers(server, it, message) }
-    defender?.let { notifyMembers(server, it, message) }
-    war.attackerAllies.forEach { allyOwner ->
-        kingdoms[allyOwner]?.let { notifyMembers(server, it, message) }
-    }
-    war.defenderAllies.forEach { allyOwner ->
-        kingdoms[allyOwner]?.let { notifyMembers(server, it, message) }
-    }
+        // Full elimination only on surrender or all-cities-captured auto-win
+        if (winner != null && (surrendered || autoWinner != null)) {
+            val winnerOwner = war.primaryOwner(winner)
+            val loserOwner = war.opposingPrimary(winner)
+            absorbKingdom(server, winnerOwner, loserOwner)
+        }
 
-    // Detailed breakdown (both sides, with per-role lines and city captures)
-    broadcastWarBreakdown(server, war, attackerName, defenderName)
+// ------------------------------------------
+// Build the detailed breakdown for the GUI
+// ------------------------------------------
+val breakdownLines = mutableListOf<String>()
 
-    // Full elimination only on surrender or all-cities-captured auto-win
-    if (winner != null && (surrendered || autoWinner != null)) {
-        val winnerOwner = war.primaryOwner(winner)
-        val loserOwner = war.opposingPrimary(winner)
-        absorbKingdom(server, winnerOwner, loserOwner)
+breakdownLines += "§lScore Breakdown"
+breakdownLines += ""
+
+// Per role contributions
+breakdownLines += "• Military Kills (x25) = ${war.attackerMilitaryKills * 25} / ${war.defenderMilitaryKills * 25}"
+breakdownLines += "• Politician Kills (x50) = ${war.attackerPoliticianKills * 50} / ${war.defenderPoliticianKills * 50}"
+breakdownLines += "• Officer Kills (x150) = ${war.attackerOfficerKills * 150} / ${war.defenderOfficerKills * 150}"
+breakdownLines += "• Leaders (x500) = ${war.attackerLeaderKills * 500} / ${war.defenderLeaderKills * 500}"
+breakdownLines += ""
+breakdownLines += "• Cities Captured (x1000) = ${war.attackerCityCaptures * 1000} / ${war.defenderCityCaptures * 1000}"
+
+// ------------------------------------------
+// Send visual title + result packet to all involved
+// ------------------------------------------
+val titleMessage = "War Won by $winnerName!"
+
+val payload = KingdomNetworking.SyncWarResultPayload(
+    winner = winnerName,
+    attackerScore = war.attackerScore,
+    defenderScore = war.defenderScore,
+    titleMessage = titleMessage,
+    breakdown = breakdownLines
+)
+
+val allOwners = mutableListOf<UUID>()
+allOwners += war.attacker
+allOwners += war.defender
+allOwners += war.attackerAllies
+allOwners += war.defenderAllies
+
+allOwners.forEach { uuid ->
+    server.playerManager.getPlayer(uuid)?.let { player ->
+        ServerPlayNetworking.send(player, payload)
     }
-
-    wars.remove(war)
-    dirty = true
 }
+
+
+        wars.remove(war)
+        dirty = true
+    }
 
 private fun broadcastWarBreakdown(
     server: MinecraftServer,

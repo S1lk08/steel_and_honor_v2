@@ -18,16 +18,32 @@ object KingdomNetworking {
     fun registerCommonPayloads() {
         if (registered) return
         registered = true
-        PayloadTypeRegistry.playS2C().register(SyncCityBordersPayload.ID, SyncCityBordersPayload.CODEC)
-        PayloadTypeRegistry.playS2C().register(SyncWarStatusPayload.ID, SyncWarStatusPayload.CODEC)
-        PayloadTypeRegistry.playS2C().register(SyncSuggestionsPayload.ID, SyncSuggestionsPayload.CODEC)
+
+        PayloadTypeRegistry.playS2C().register(
+            SyncCityBordersPayload.ID,
+            SyncCityBordersPayload.CODEC
+        )
+        PayloadTypeRegistry.playS2C().register(
+            SyncWarStatusPayload.ID,
+            SyncWarStatusPayload.CODEC
+        )
+        PayloadTypeRegistry.playS2C().register(
+            SyncSuggestionsPayload.ID,
+            SyncSuggestionsPayload.CODEC
+        )
+        PayloadTypeRegistry.playS2C().register(
+            SyncWarResultPayload.ID,
+            SyncWarResultPayload.CODEC
+        )
     }
 
     fun registerServer() {
         registerCommonPayloads()
     }
 
-    // --- City borders ---
+    // ------------------------------------------------------------------------
+    // City borders
+    // ------------------------------------------------------------------------
 
     fun sendCityBorders(player: ServerPlayerEntity, snapshots: List<CityBorderSnapshot>) {
         val payload = buildCityPayload(snapshots)
@@ -73,13 +89,13 @@ object KingdomNetworking {
                         buf.writeVarInt(value.cities.size)
                         value.cities.forEach { city ->
                             buf.writeUuid(city.id)
-                            buf.writeString(city.name, 64)
+                            buf.writeString(city.name)
                             buf.writeBlockPos(city.center)
                             buf.writeVarInt(city.radius)
                             buf.writeIdentifier(city.dimension)
                             buf.writeBoolean(city.capital)
                             buf.writeVarInt(city.colorId)
-                            buf.writeString(city.kingdomName, 64)
+                            buf.writeString(city.kingdomName)
                             buf.writeVarInt(city.minChunkX)
                             buf.writeVarInt(city.maxChunkX)
                             buf.writeVarInt(city.minChunkZ)
@@ -105,18 +121,18 @@ object KingdomNetworking {
                             val maxChunkZ = buf.readVarInt()
                             entries.add(
                                 CityBorderData(
-                                    id,
-                                    name,
-                                    center,
-                                    radius,
-                                    dimension,
-                                    capital,
-                                    colorId,
-                                    kingdomName,
-                                    minChunkX,
-                                    maxChunkX,
-                                    minChunkZ,
-                                    maxChunkZ
+                                    id = id,
+                                    name = name,
+                                    center = center,
+                                    radius = radius,
+                                    dimension = dimension,
+                                    capital = capital,
+                                    colorId = colorId,
+                                    kingdomName = kingdomName,
+                                    minChunkX = minChunkX,
+                                    maxChunkX = maxChunkX,
+                                    minChunkZ = minChunkZ,
+                                    maxChunkZ = maxChunkZ
                                 )
                             )
                         }
@@ -141,13 +157,10 @@ object KingdomNetworking {
         val maxChunkZ: Int
     )
 
-    // --- War HUD ---
+    // ------------------------------------------------------------------------
+    // War HUD status (top-of-screen bar)
+    // ------------------------------------------------------------------------
 
-    /**
-     * Server → client war status snapshot.
-     *
-     * captureProgress is expected in [0.0, 1.0].
-     */
     data class WarStatusEntry(
         val attackerName: String,
         val defenderName: String,
@@ -235,7 +248,9 @@ object KingdomNetworking {
         ServerPlayNetworking.send(player, payload)
     }
 
-    // --- Suggestions ---
+    // ------------------------------------------------------------------------
+    // Suggestions (tab-complete / UI)
+    // ------------------------------------------------------------------------
 
     data class SuggestionData(
         val kingdomNames: List<String>,
@@ -264,18 +279,18 @@ object KingdomNetworking {
                     }
 
                     override fun decode(buf: PacketByteBuf): SyncSuggestionsPayload {
-                        val kingdomNames = buf.readCollection({ mutableListOf<String>() }) { it.readString(64) }
-                        val playerNames = buf.readCollection({ mutableListOf<String>() }) { it.readString(64) }
-                        val warTargets = buf.readCollection({ mutableListOf<String>() }) { it.readString(64) }
-                        val inviteTargets = buf.readCollection({ mutableListOf<String>() }) { it.readString(64) }
-                        val warRequestTargets = buf.readCollection({ mutableListOf<String>() }) { it.readString(64) }
+                        val kingdomNames = buf.readCollection({ mutableListOf() }) { it.readString(64) }
+                        val playerNames = buf.readCollection({ mutableListOf() }) { it.readString(64) }
+                        val warTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
+                        val inviteTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
+                        val warRequestTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
                         return SyncSuggestionsPayload(
                             SuggestionData(
-                                kingdomNames,
-                                playerNames,
-                                warTargets,
-                                inviteTargets,
-                                warRequestTargets
+                                kingdomNames = kingdomNames,
+                                playerNames = playerNames,
+                                warTargets = warTargets,
+                                inviteTargets = inviteTargets,
+                                warRequestTargets = warRequestTargets
                             )
                         )
                     }
@@ -285,6 +300,81 @@ object KingdomNetworking {
 
     fun sendSuggestions(player: ServerPlayerEntity, suggestions: SuggestionData) {
         val payload = SyncSuggestionsPayload(suggestions)
+        ServerPlayNetworking.send(player, payload)
+    }
+
+    // ------------------------------------------------------------------------
+    // War Result (end-of-war result screen)
+    // ------------------------------------------------------------------------
+
+    /**
+     * winnerSide: 0 = draw, 1 = attacker, 2 = defender
+     */
+    data class WarResultEntry(
+        val attackerName: String,
+        val defenderName: String,
+        val winnerSide: Int,
+        val attackerScore: Int,
+        val defenderScore: Int,
+        val attackerKills: Int,
+        val defenderKills: Int,
+        val attackerCityCaptures: Int,
+        val defenderCityCaptures: Int
+    )
+
+    data class SyncWarResultPayload(val result: WarResultEntry) : CustomPayload {
+        override fun getId(): CustomPayload.Id<SyncWarResultPayload> = ID
+
+        companion object {
+            val ID: CustomPayload.Id<SyncWarResultPayload> =
+                CustomPayload.Id(Identifier.of(SteelAndHonorMod.MOD_ID, "sync_war_result"))
+
+            val CODEC: PacketCodec<PacketByteBuf, SyncWarResultPayload> =
+                object : PacketCodec<PacketByteBuf, SyncWarResultPayload> {
+                    override fun encode(buf: PacketByteBuf, value: SyncWarResultPayload) {
+                        val r = value.result
+                        buf.writeString(r.attackerName, 64)
+                        buf.writeString(r.defenderName, 64)
+                        buf.writeVarInt(r.winnerSide)
+                        buf.writeVarInt(r.attackerScore)
+                        buf.writeVarInt(r.defenderScore)
+                        buf.writeVarInt(r.attackerKills)
+                        buf.writeVarInt(r.defenderKills)
+                        buf.writeVarInt(r.attackerCityCaptures)
+                        buf.writeVarInt(r.defenderCityCaptures)
+                    }
+
+                    override fun decode(buf: PacketByteBuf): SyncWarResultPayload {
+                        val attackerName = buf.readString(64)
+                        val defenderName = buf.readString(64)
+                        val winnerSide = buf.readVarInt()
+                        val attackerScore = buf.readVarInt()
+                        val defenderScore = buf.readVarInt()
+                        val attackerKills = buf.readVarInt()
+                        val defenderKills = buf.readVarInt()
+                        val attackerCityCaptures = buf.readVarInt()
+                        val defenderCityCaptures = buf.readVarInt()
+
+                        return SyncWarResultPayload(
+                            WarResultEntry(
+                                attackerName = attackerName,
+                                defenderName = defenderName,
+                                winnerSide = winnerSide,
+                                attackerScore = attackerScore,
+                                defenderScore = defenderScore,
+                                attackerKills = attackerKills,
+                                defenderKills = defenderKills,
+                                attackerCityCaptures = attackerCityCaptures,
+                                defenderCityCaptures = defenderCityCaptures
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    fun sendWarResult(player: ServerPlayerEntity, result: WarResultEntry) {
+        val payload = SyncWarResultPayload(result)
         ServerPlayNetworking.send(player, payload)
     }
 }
