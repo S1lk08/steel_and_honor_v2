@@ -2,6 +2,7 @@ package com.steelandhonor.modid.client.gui
 
 import com.steelandhonor.modid.command.KingdomCommand
 import com.steelandhonor.modid.kingdom.KingdomManager
+import com.steelandhonor.modid.kingdom.KingdomRole
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.screen.Screen
@@ -197,9 +198,9 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         registerControl(joinButton, joinBase)
 
         val leaveBase = min(
-    sectionTop() + 90,
-    contentBottom() - 35       // always keeps it inside panel
-)
+            sectionTop() + 90,
+            contentBottom() - 35       // keep inside panel
+        )
 
         val leaveWidth = columnWidth() * 2 + COLUMN_SPACING
         val leaveButton = ButtonWidget.builder(
@@ -213,6 +214,10 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 
     private fun buildWarPage() {
         addParagraph("screen.steel_and_honor.menu.war.info")
+
+        // --------------------------
+        // Declare War
+        // --------------------------
         val declareBase = sectionTop() + 10
         val declareField = textField(
             leftColumnX(),
@@ -232,6 +237,9 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         addDrawableChild(declareButton)
         registerControl(declareButton, declareBase)
 
+        // --------------------------
+        // Assistance Requests
+        // --------------------------
         val requestBase = sectionTop() + 55
         val requestField = textField(
             leftColumnX(),
@@ -251,6 +259,9 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         addDrawableChild(requestButton)
         registerControl(requestButton, requestBase)
 
+        // --------------------------
+        // Approve / Deny Requests
+        // --------------------------
         val responseBase = sectionTop() + 100
         val responseField = textField(
             leftColumnX(),
@@ -259,6 +270,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
             "screen.steel_and_honor.menu.war.approvals",
             SuggestionType.WAR_REQUEST_TARGET
         )
+
         val approveButton = ButtonWidget.builder(
             Text.translatable("screen.steel_and_honor.menu.war.approve.button")
         ) {
@@ -267,6 +279,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
                 runCommand("kingdom war approve $target")
             }
         }.dimensions(rightColumnX(), responseBase - 5, columnWidth(), 20).build()
+
         val denyButton = ButtonWidget.builder(
             Text.translatable("screen.steel_and_honor.menu.war.deny.button")
         ) {
@@ -275,15 +288,46 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
                 runCommand("kingdom war deny $target")
             }
         }.dimensions(rightColumnX(), responseBase + 25, columnWidth(), 20).build()
+
         addDrawableChild(approveButton)
         addDrawableChild(denyButton)
         registerControl(approveButton, responseBase - 5)
         registerControl(denyButton, responseBase + 25)
+
+        // ======================================================
+        // NEW: SURRENDER BUTTON (pulsing, leader-only)
+        // ======================================================
+        val mc = MinecraftClient.getInstance()
+        val player = mc.player
+        val uuid = player?.uuid ?: return
+
+        val role = KingdomManager.getRole(uuid)
+        val isLeader = role == KingdomRole.LEADER
+
+        val surrenderBase = responseBase + 70
+        val surrenderWidth = columnWidth() * 2 + COLUMN_SPACING
+
+        val surrenderButton = PulsingButtonWidget(
+            centerX() - surrenderWidth / 2,
+            surrenderBase,
+            surrenderWidth,
+            20,
+            Text.translatable("screen.steel_and_honor.menu.war.surrender.button")
+        ) {
+            if (isLeader) {
+                mc.setScreen(SurrenderConfirmScreen(this))
+            }
+        }
+
+        // Greyed out for non-leaders
+        surrenderButton.active = isLeader
+
+        addDrawableChild(surrenderButton)
+        registerControl(surrenderButton, surrenderBase)
     }
 
     /**
-     * FLAG page – Choice B:
-     * Shows current main-hand banner and a button that sends /kingdom flag.
+     * FLAG page – shows current main-hand banner and button that sends /kingdom flag.
      */
     private fun buildFlagPage() {
         addParagraph("screen.steel_and_honor.menu.flag.info")
@@ -308,10 +352,6 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         val flagButton = ButtonWidget.builder(
             Text.translatable("screen.steel_and_honor.menu.flag.button")
         ) {
-            // Server will validate ruler permission + banner presence:
-            // - command.steel_and_honor.kingdom.flag.no_permission
-            // - command.steel_and_honor.kingdom.flag.no_banner
-            // - command.steel_and_honor.kingdom.flag.updated
             runCommand("kingdom flag")
         }.dimensions(centerX() - 75, buttonBaseY, 150, 20).build()
 
@@ -597,7 +637,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 
     private fun drawContentPanel(context: DrawContext) {
         val left = panelLeft()
-        val top = panelTop()
+        the top = panelTop()
         val right = left + panelWidth()
         val bottom = top + panelHeight()
         val headerBottom = top + HEADER_HEIGHT
@@ -755,4 +795,69 @@ enum class MenuPage(val titleKey: String, val navKey: String) {
 
     // New tab for banner flag management
     FLAG("screen.steel_and_honor.menu.flag.title", "screen.steel_and_honor.menu.nav.flag")
+}
+
+class PulsingButtonWidget(
+    x: Int,
+    y: Int,
+    width: Int,
+    height: Int,
+    message: Text,
+    onPress: () -> Unit
+) : ButtonWidget(x, y, width, height, message, { onPress() }, DEFAULT_NARRATION_SUPPLIER) {
+
+    private var tick = 0f
+
+    override fun renderWidget(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+        tick += delta * 0.15f
+
+        val pulse = ((Math.sin(tick.toDouble()) + 1.0) / 2.0).toFloat()
+        val alpha = if (active) (60 + pulse * 60).toInt() else 40
+
+        val color = (alpha shl 24) or 0xFFAA4444.toInt()
+        context.fill(x - 2, y - 2, x + width + 2, y + height + 2, color)
+
+        super.renderWidget(context, mouseX, mouseY, delta)
+    }
+}
+
+class SurrenderConfirmScreen(private val parent: Screen) :
+    Screen(Text.translatable("screen.steel_and_honor.menu.war.surrender.confirm.title")) {
+
+    override fun init() {
+        val centerX = width / 2
+        val baseY = height / 2 - 10
+
+        val confirmBtn = ButtonWidget.builder(
+            Text.translatable("screen.steel_and_honor.menu.war.surrender.confirm")
+        ) {
+            val player = MinecraftClient.getInstance().player
+            player?.networkHandler?.sendCommand("kingdom war surrender")
+            MinecraftClient.getInstance().setScreen(parent)
+        }.dimensions(centerX - 80, baseY, 160, 20).build()
+
+        val cancelBtn = ButtonWidget.builder(
+            Text.translatable("screen.steel_and_honor.menu.war.surrender.cancel")
+        ) {
+            MinecraftClient.getInstance().setScreen(parent)
+        }.dimensions(centerX - 80, baseY + 30, 160, 20).build()
+
+        addDrawableChild(confirmBtn)
+        addDrawableChild(cancelBtn)
+    }
+
+    override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+        this.renderBackground(context)
+        super.render(context, mouseX, mouseY, delta)
+
+        context.drawCenteredTextWithShadow(
+            textRenderer,
+            Text.translatable("screen.steel_and_honor.menu.war.surrender.prompt"),
+            width / 2,
+            height / 2 - 40,
+            0xFFFFFF
+        )
+    }
+
+    override fun shouldPause() = false
 }

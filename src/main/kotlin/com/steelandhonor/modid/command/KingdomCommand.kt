@@ -224,29 +224,47 @@ object KingdomCommand {
             }
     }
 
-    private fun warNode(): ArgumentBuilder<ServerCommandSource, *> {
-        return CommandManager.literal("war")
-            .then(
-                CommandManager.literal("declare")
-                    .then(CommandManager.argument("kingdom", StringArgumentType.string())
-                        .suggests(rivalKingdomSuggestions)
-                        .executes { ctx ->
-                            val player = ctx.source.playerOrThrow
-                            runOp(ctx) {
-                                val target = StringArgumentType.getString(ctx, "kingdom")
-                                KingdomManager.declareWar(player, target)
-                                ctx.source.sendFeedback(
-                                    { Text.translatable("command.steel_and_honor.kingdom.war.declared", target) },
-                                    true
-                                )
-                                1
-                            }
-                        })
-            )
-            .then(warRequestNode())
-            .then(warApproveNode())
-            .then(warDenyNode())
-    }
+private fun warNode(): ArgumentBuilder<ServerCommandSource, *> {
+    return CommandManager.literal("war")
+        .then(
+            CommandManager.literal("declare")
+                .then(CommandManager.argument("kingdom", StringArgumentType.string())
+                    .suggests(rivalKingdomSuggestions)
+                    .executes { ctx ->
+                        val player = ctx.source.playerOrThrow
+                        runOp(ctx) {
+                            val target = StringArgumentType.getString(ctx, "kingdom")
+                            KingdomManager.declareWar(player, target)
+                            ctx.source.sendFeedback(
+                                { Text.translatable("command.steel_and_honor.kingdom.war.declared", target) },
+                                true
+                            )
+                            1
+                        }
+                    })
+        )
+        .then(warRequestNode())
+        .then(warApproveNode())
+        .then(warDenyNode())
+
+        // ⭐ NEW LINE: Add surrender node
+        .then(warSurrenderNode())
+}
+
+private fun warSurrenderNode(): ArgumentBuilder<ServerCommandSource, *> {
+    return CommandManager.literal("surrender")
+        .executes { ctx ->
+            val player = ctx.source.playerOrThrow
+            runOp(ctx) {
+                KingdomManager.surrender(player)
+                ctx.source.sendFeedback(
+                    { Text.translatable("command.steel_and_honor.kingdom.war.surrender.success") },
+                    true
+                )
+                1
+            }
+        }
+}
 
     private fun warRequestNode(): ArgumentBuilder<ServerCommandSource, *> {
         return CommandManager.literal("request")

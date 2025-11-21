@@ -1898,3 +1898,14 @@ private data class ClaimedArea(
             maxChunkZ >= other.minChunkZ
     }
 }
+
+fun isInWar(owner: UUID): Boolean {
+    return WarManager.getWars().any { war ->
+        war.includes(owner)
+    }
+}
+
+fun isInWar(uuid: UUID): Boolean {
+    return wars.any { it.includes(uuid) }
+}
+
