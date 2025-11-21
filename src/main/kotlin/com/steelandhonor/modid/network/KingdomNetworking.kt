@@ -19,31 +19,19 @@ object KingdomNetworking {
         if (registered) return
         registered = true
 
-        PayloadTypeRegistry.playS2C().register(
-            SyncCityBordersPayload.ID,
-            SyncCityBordersPayload.CODEC
-        )
-        PayloadTypeRegistry.playS2C().register(
-            SyncWarStatusPayload.ID,
-            SyncWarStatusPayload.CODEC
-        )
-        PayloadTypeRegistry.playS2C().register(
-            SyncSuggestionsPayload.ID,
-            SyncSuggestionsPayload.CODEC
-        )
-        PayloadTypeRegistry.playS2C().register(
-            SyncWarResultPayload.ID,
-            SyncWarResultPayload.CODEC
-        )
+        PayloadTypeRegistry.playS2C().register(SyncCityBordersPayload.ID, SyncCityBordersPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(SyncWarStatusPayload.ID, SyncWarStatusPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(SyncSuggestionsPayload.ID, SyncSuggestionsPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(SyncWarResultPayload.ID, SyncWarResultPayload.CODEC)
     }
 
     fun registerServer() {
         registerCommonPayloads()
     }
 
-    // ------------------------------------------------------------------------
-    // City borders
-    // ------------------------------------------------------------------------
+    // -------------------------------------------------
+    // CITY BORDERS
+    // -------------------------------------------------
 
     fun sendCityBorders(player: ServerPlayerEntity, snapshots: List<CityBorderSnapshot>) {
         val payload = buildCityPayload(snapshots)
@@ -121,18 +109,18 @@ object KingdomNetworking {
                             val maxChunkZ = buf.readVarInt()
                             entries.add(
                                 CityBorderData(
-                                    id = id,
-                                    name = name,
-                                    center = center,
-                                    radius = radius,
-                                    dimension = dimension,
-                                    capital = capital,
-                                    colorId = colorId,
-                                    kingdomName = kingdomName,
-                                    minChunkX = minChunkX,
-                                    maxChunkX = maxChunkX,
-                                    minChunkZ = minChunkZ,
-                                    maxChunkZ = maxChunkZ
+                                    id,
+                                    name,
+                                    center,
+                                    radius,
+                                    dimension,
+                                    capital,
+                                    colorId,
+                                    kingdomName,
+                                    minChunkX,
+                                    maxChunkX,
+                                    minChunkZ,
+                                    maxChunkZ
                                 )
                             )
                         }
@@ -157,24 +145,22 @@ object KingdomNetworking {
         val maxChunkZ: Int
     )
 
-    // ------------------------------------------------------------------------
-    // War HUD status (top-of-screen bar)
-    // ------------------------------------------------------------------------
+    // -------------------------------------------------
+    // WAR HUD STATUS
+    // -------------------------------------------------
 
-    data class WarStatusEntry(
-        val attackerName: String,
-        val defenderName: String,
-        val attackerColorId: Int,
-        val defenderColorId: Int,
-        val attackerKills: Int,
-        val defenderKills: Int,
-        val secondsRemaining: Int,
-        val prepSecondsRemaining: Int,
-        val attackerScore: Int,
-        val defenderScore: Int,
-        val activeCityName: String,
-        val captureProgress: Float
-    )
+data class WarStatusEntry(
+    val attackerName: String,
+    val defenderName: String,
+    val attackerColorId: Int,
+    val defenderColorId: Int,
+    val secondsRemaining: Int,
+    val prepSecondsRemaining: Int,
+    val attackerScore: Int,
+    val defenderScore: Int,
+    val activeCityName: String,
+    val captureProgress: Float
+)
 
     data class SyncWarStatusPayload(val wars: List<WarStatusEntry>) : CustomPayload {
         override fun getId(): CustomPayload.Id<SyncWarStatusPayload> = ID
@@ -183,63 +169,46 @@ object KingdomNetworking {
             val ID: CustomPayload.Id<SyncWarStatusPayload> =
                 CustomPayload.Id(Identifier.of(SteelAndHonorMod.MOD_ID, "sync_war_status"))
 
-            val CODEC: PacketCodec<PacketByteBuf, SyncWarStatusPayload> =
-                object : PacketCodec<PacketByteBuf, SyncWarStatusPayload> {
-                    override fun encode(buf: PacketByteBuf, value: SyncWarStatusPayload) {
-                        buf.writeVarInt(value.wars.size)
-                        value.wars.forEach { war ->
-                            buf.writeString(war.attackerName, 64)
-                            buf.writeString(war.defenderName, 64)
-                            buf.writeVarInt(war.attackerColorId)
-                            buf.writeVarInt(war.defenderColorId)
-                            buf.writeVarInt(war.attackerKills)
-                            buf.writeVarInt(war.defenderKills)
-                            buf.writeVarInt(war.secondsRemaining)
-                            buf.writeVarInt(war.prepSecondsRemaining)
-                            buf.writeVarInt(war.attackerScore)
-                            buf.writeVarInt(war.defenderScore)
-                            buf.writeString(war.activeCityName, 64)
-                            buf.writeFloat(war.captureProgress)
-                        }
-                    }
+val CODEC: PacketCodec<PacketByteBuf, SyncWarStatusPayload> =
+    object : PacketCodec<PacketByteBuf, SyncWarStatusPayload> {
 
-                    override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
-                        val count = buf.readVarInt()
-                        val wars = mutableListOf<WarStatusEntry>()
-                        repeat(count) {
-                            val attackerName = buf.readString(64)
-                            val defenderName = buf.readString(64)
-                            val attackerColorId = buf.readVarInt()
-                            val defenderColorId = buf.readVarInt()
-                            val attackerKills = buf.readVarInt()
-                            val defenderKills = buf.readVarInt()
-                            val secondsRemaining = buf.readVarInt()
-                            val prepSecondsRemaining = buf.readVarInt()
-                            val attackerScore = buf.readVarInt()
-                            val defenderScore = buf.readVarInt()
-                            val activeCityName = buf.readString(64)
-                            val captureProgress = buf.readFloat()
+        override fun encode(buf: PacketByteBuf, value: SyncWarStatusPayload) {
+            buf.writeVarInt(value.wars.size)
+            value.wars.forEach { war ->
+                buf.writeString(war.attackerName, 64)
+                buf.writeString(war.defenderName, 64)
+                buf.writeVarInt(war.attackerColorId)
+                buf.writeVarInt(war.defenderColorId)
+                buf.writeVarInt(war.secondsRemaining)
+                buf.writeVarInt(war.prepSecondsRemaining)
+                buf.writeVarInt(war.attackerScore)
+                buf.writeVarInt(war.defenderScore)
+                buf.writeString(war.activeCityName, 64)
+                buf.writeFloat(war.captureProgress)
+            }
+        }
 
-                            wars.add(
-                                WarStatusEntry(
-                                    attackerName = attackerName,
-                                    defenderName = defenderName,
-                                    attackerColorId = attackerColorId,
-                                    defenderColorId = defenderColorId,
-                                    attackerKills = attackerKills,
-                                    defenderKills = defenderKills,
-                                    secondsRemaining = secondsRemaining,
-                                    prepSecondsRemaining = prepSecondsRemaining,
-                                    attackerScore = attackerScore,
-                                    defenderScore = defenderScore,
-                                    activeCityName = activeCityName,
-                                    captureProgress = captureProgress
-                                )
-                            )
-                        }
-                        return SyncWarStatusPayload(wars)
-                    }
-                }
+override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
+    val size = buf.readVarInt()
+    val wars = MutableList(size) {
+        WarStatusEntry(
+            attackerName = buf.readString(64),
+            defenderName = buf.readString(64),
+            attackerColorId = buf.readVarInt(),
+            defenderColorId = buf.readVarInt(),
+            secondsRemaining = buf.readVarInt(),
+            prepSecondsRemaining = buf.readVarInt(),
+            attackerScore = buf.readVarInt(),
+            defenderScore = buf.readVarInt(),
+            activeCityName = buf.readString(64),
+            captureProgress = buf.readFloat()
+        )
+    }
+    return SyncWarStatusPayload(wars)
+}
+
+    }
+
         }
     }
 
@@ -248,9 +217,9 @@ object KingdomNetworking {
         ServerPlayNetworking.send(player, payload)
     }
 
-    // ------------------------------------------------------------------------
-    // Suggestions (tab-complete / UI)
-    // ------------------------------------------------------------------------
+    // -------------------------------------------------
+    // SUGGESTIONS
+    // -------------------------------------------------
 
     data class SuggestionData(
         val kingdomNames: List<String>,
@@ -283,14 +252,15 @@ object KingdomNetworking {
                         val playerNames = buf.readCollection({ mutableListOf() }) { it.readString(64) }
                         val warTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
                         val inviteTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
-                        val warRequestTargets = buf.readCollection({ mutableListOf() }) { it.readString(64) }
+                        val warRequestTargets =
+                            buf.readCollection({ mutableListOf() }) { it.readString(64) }
                         return SyncSuggestionsPayload(
                             SuggestionData(
-                                kingdomNames = kingdomNames,
-                                playerNames = playerNames,
-                                warTargets = warTargets,
-                                inviteTargets = inviteTargets,
-                                warRequestTargets = warRequestTargets
+                                kingdomNames,
+                                playerNames,
+                                warTargets,
+                                inviteTargets,
+                                warRequestTargets
                             )
                         )
                     }
@@ -303,9 +273,9 @@ object KingdomNetworking {
         ServerPlayNetworking.send(player, payload)
     }
 
-    // ------------------------------------------------------------------------
-    // War Result (end-of-war result screen)
-    // ------------------------------------------------------------------------
+    // -------------------------------------------------
+    // WAR RESULT SUMMARY (END-OF-WAR SCREEN)
+    // -------------------------------------------------
 
     /**
      * winnerSide: 0 = draw, 1 = attacker, 2 = defender
@@ -354,7 +324,6 @@ object KingdomNetworking {
                         val defenderKills = buf.readVarInt()
                         val attackerCityCaptures = buf.readVarInt()
                         val defenderCityCaptures = buf.readVarInt()
-
                         return SyncWarResultPayload(
                             WarResultEntry(
                                 attackerName = attackerName,

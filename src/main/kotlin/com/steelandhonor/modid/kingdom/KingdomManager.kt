@@ -969,53 +969,51 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
     // Citizens still do not count at all
     if (victimRole == KingdomRole.CITIZEN) return
 
-    var points = 0
-
-    when (victimRole) {
+    val points = when (victimRole) {
         KingdomRole.MILITARY -> {
-            points = 25
             if (killerSide == WarSide.ATTACKER) {
                 war.attackerMilitaryKills++
             } else {
                 war.defenderMilitaryKills++
             }
+            25
         }
         KingdomRole.POLITICIAN -> {
-            points = 50
             if (killerSide == WarSide.ATTACKER) {
                 war.attackerPoliticianKills++
             } else {
                 war.defenderPoliticianKills++
             }
+            50
         }
         KingdomRole.OFFICER -> {
-            points = 150
             if (killerSide == WarSide.ATTACKER) {
                 war.attackerOfficerKills++
             } else {
                 war.defenderOfficerKills++
             }
+            150
         }
         KingdomRole.LEADER -> {
-            points = 500
             if (killerSide == WarSide.ATTACKER) {
                 war.attackerLeaderKills++
             } else {
                 war.defenderLeaderKills++
             }
+            500
         }
-        else -> {
-            // no points, no extra tracking
-        }
+        else -> 0 // no score, no tracking
     }
 
+    if (points <= 0) return
+
+    // Total kill count used for the end-of-war screen (no score tied to this directly)
     war.incrementKill(killerSide)
 
-    if (points > 0) {
-        when (killerSide) {
-            WarSide.ATTACKER -> war.attackerScore += points
-            WarSide.DEFENDER -> war.defenderScore += points
-        }
+    // Apply score for this kill
+    when (killerSide) {
+        WarSide.ATTACKER -> war.attackerScore += points
+        WarSide.DEFENDER -> war.defenderScore += points
     }
 
     dirty = true
@@ -1416,7 +1414,7 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
             kingdoms[allyOwner]?.let { notifyMembers(server, it, message) }
         }
 
-        // Compute city capture counts for each side
+        // Compute city capture counts for each side (in case WarState's counters are out of sync)
         val attackerCityCaptures = war.cities.count {
             it.capturedBy == WarSide.ATTACKER && it.originalSide == WarSide.DEFENDER
         }
@@ -1424,7 +1422,7 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
             it.capturedBy == WarSide.DEFENDER && it.originalSide == WarSide.ATTACKER
         }
 
-        // Broadcast detailed result (for celebration + result screen)
+        // Send war result payload for title + result screen
         broadcastWarResult(
             server = server,
             war = war,
@@ -1433,54 +1431,15 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
             defenderCityCaptures = defenderCityCaptures
         )
 
+        // Optional: chat breakdown with bullet points + allies
+        broadcastWarBreakdown(server, war, attackerName, defenderName)
+
         // Full elimination only on surrender or all-cities-captured auto-win
         if (winner != null && (surrendered || autoWinner != null)) {
             val winnerOwner = war.primaryOwner(winner)
             val loserOwner = war.opposingPrimary(winner)
             absorbKingdom(server, winnerOwner, loserOwner)
         }
-
-// ------------------------------------------
-// Build the detailed breakdown for the GUI
-// ------------------------------------------
-val breakdownLines = mutableListOf<String>()
-
-breakdownLines += "§lScore Breakdown"
-breakdownLines += ""
-
-// Per role contributions
-breakdownLines += "• Military Kills (x25) = ${war.attackerMilitaryKills * 25} / ${war.defenderMilitaryKills * 25}"
-breakdownLines += "• Politician Kills (x50) = ${war.attackerPoliticianKills * 50} / ${war.defenderPoliticianKills * 50}"
-breakdownLines += "• Officer Kills (x150) = ${war.attackerOfficerKills * 150} / ${war.defenderOfficerKills * 150}"
-breakdownLines += "• Leaders (x500) = ${war.attackerLeaderKills * 500} / ${war.defenderLeaderKills * 500}"
-breakdownLines += ""
-breakdownLines += "• Cities Captured (x1000) = ${war.attackerCityCaptures * 1000} / ${war.defenderCityCaptures * 1000}"
-
-// ------------------------------------------
-// Send visual title + result packet to all involved
-// ------------------------------------------
-val titleMessage = "War Won by $winnerName!"
-
-val payload = KingdomNetworking.SyncWarResultPayload(
-    winner = winnerName,
-    attackerScore = war.attackerScore,
-    defenderScore = war.defenderScore,
-    titleMessage = titleMessage,
-    breakdown = breakdownLines
-)
-
-val allOwners = mutableListOf<UUID>()
-allOwners += war.attacker
-allOwners += war.defender
-allOwners += war.attackerAllies
-allOwners += war.defenderAllies
-
-allOwners.forEach { uuid ->
-    server.playerManager.getPlayer(uuid)?.let { player ->
-        ServerPlayNetworking.send(player, payload)
-    }
-}
-
 
         wars.remove(war)
         dirty = true
@@ -1621,20 +1580,18 @@ private fun sendWarHudUpdates(server: MinecraftServer) {
                     .toFloat()
                     .coerceIn(0f, 1f) // HUD expects 0.0–1.0
 
-                KingdomNetworking.WarStatusEntry(
-                    attackerName = attackerData.name,
-                    defenderName = defenderData.name,
-                    attackerColorId = attackerData.color.id,
-                    defenderColorId = defenderData.color.id,
-                    attackerKills = war.attackerKills,
-                    defenderKills = war.defenderKills,
-                    secondsRemaining = warSeconds.toInt(),
-                    prepSecondsRemaining = prepSeconds.toInt(),
-                    attackerScore = war.attackerScore,
-                    defenderScore = war.defenderScore,
-                    activeCityName = activeCityName,
-                    captureProgress = captureProgress
-                )
+KingdomNetworking.WarStatusEntry(
+    attackerName = attackerData.name,
+    defenderName = defenderData.name,
+    attackerColorId = attackerData.color.id,
+    defenderColorId = defenderData.color.id,
+    secondsRemaining = warSeconds.toInt(),
+    prepSecondsRemaining = prepSeconds.toInt(),
+    attackerScore = war.attackerScore,
+    defenderScore = war.defenderScore,
+    activeCityName = activeCityName,
+    captureProgress = captureProgress
+)
             }
 
         KingdomNetworking.sendWarStatus(player, payloadWars)

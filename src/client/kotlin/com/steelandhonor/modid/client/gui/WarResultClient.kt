@@ -4,7 +4,8 @@ import com.steelandhonor.modid.network.KingdomNetworking
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.MinecraftClient
 import net.minecraft.particle.ParticleTypes
-import net.minecraft.sound.SoundEvents
+import net.minecraft.sound.SoundEvent
+import net.minecraft.util.Identifier
 import net.minecraft.text.Text
 import kotlin.random.Random
 
@@ -30,8 +31,9 @@ object WarResultClient {
 
             val player = client.player ?: return@execute
 
-            // Play goat horn once at the start
-            player.playSound(SoundEvents.ITEM_GOAT_HORN_SOUND_0, 1.0f, 1.0f)
+            // Goat horn sound
+            val horn = SoundEvent.of(Identifier.of("minecraft", "item.goat_horn.sound.0"))
+            player.playSound(horn, 1f, 1f)
 
             // Big title
             val winnerText = when (result.winnerSide) {
@@ -53,7 +55,7 @@ object WarResultClient {
 
         celebrationTicks--
 
-        // Simple particle ring around the player while celebrating
+        // Particle fireworks ring
         repeat(12) {
             val angle = random.nextDouble() * Math.PI * 2.0
             val radius = 1.5
@@ -70,7 +72,7 @@ object WarResultClient {
         }
 
         if (celebrationTicks == 0) {
-            // Clear title and open the result screen
+            // Clear title and open result screen
             client.inGameHud.setTitle(Text.empty())
             client.inGameHud.setSubtitle(Text.empty())
 
