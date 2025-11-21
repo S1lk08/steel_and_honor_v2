@@ -85,7 +85,9 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
     private fun buildStatusPage() {
         addParagraph("screen.steel_and_honor.menu.status.info")
         val baseY = sectionTop() + 12
-        val button = ButtonWidget.builder(Text.translatable("screen.steel_and_honor.menu.status.refresh")) {
+        val button = ButtonWidget.builder(
+            Text.translatable("screen.steel_and_honor.menu.status.refresh")
+        ) {
             runCommand("kingdom info")
         }.dimensions(centerX() - 75, baseY, 150, 20).build()
         addDrawableChild(button)
@@ -199,7 +201,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 
         val leaveBase = min(
             sectionTop() + 90,
-            contentBottom() - 35       // keep inside panel
+            contentBottom() - 35
         )
 
         val leaveWidth = columnWidth() * 2 + COLUMN_SPACING
@@ -215,9 +217,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
     private fun buildWarPage() {
         addParagraph("screen.steel_and_honor.menu.war.info")
 
-        // --------------------------
         // Declare War
-        // --------------------------
         val declareBase = sectionTop() + 10
         val declareField = textField(
             leftColumnX(),
@@ -237,9 +237,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         addDrawableChild(declareButton)
         registerControl(declareButton, declareBase)
 
-        // --------------------------
         // Assistance Requests
-        // --------------------------
         val requestBase = sectionTop() + 55
         val requestField = textField(
             leftColumnX(),
@@ -259,9 +257,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         addDrawableChild(requestButton)
         registerControl(requestButton, requestBase)
 
-        // --------------------------
         // Approve / Deny Requests
-        // --------------------------
         val responseBase = sectionTop() + 100
         val responseField = textField(
             leftColumnX(),
@@ -294,18 +290,18 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         registerControl(approveButton, responseBase - 5)
         registerControl(denyButton, responseBase + 25)
 
-        // ======================================================
-        // NEW: SURRENDER BUTTON (pulsing, leader-only)
-        // ======================================================
+        // SURRENDER BUTTON WITH ROLE CHECK + ANIMATION
         val mc = MinecraftClient.getInstance()
         val player = mc.player
         val uuid = player?.uuid ?: return
 
-        val role = KingdomManager.getRole(uuid)
-        val isLeader = role == KingdomRole.LEADER
+        if (!KingdomManager.isInWar(uuid)) return
 
         val surrenderBase = responseBase + 70
         val surrenderWidth = columnWidth() * 2 + COLUMN_SPACING
+
+        val role = KingdomManager.getRole(uuid)
+        val isLeader = role == KingdomRole.LEADER
 
         val surrenderButton = PulsingButtonWidget(
             centerX() - surrenderWidth / 2,
@@ -319,16 +315,11 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
             }
         }
 
-        // Greyed out for non-leaders
         surrenderButton.active = isLeader
-
         addDrawableChild(surrenderButton)
         registerControl(surrenderButton, surrenderBase)
     }
 
-    /**
-     * FLAG page – shows current main-hand banner and button that sends /kingdom flag.
-     */
     private fun buildFlagPage() {
         addParagraph("screen.steel_and_honor.menu.flag.info")
 
@@ -347,7 +338,6 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         addDrawableChild(preview)
         registerControl(preview, previewY)
 
-        // Confirm button under the preview
         val buttonBaseY = previewY + 50
         val flagButton = ButtonWidget.builder(
             Text.translatable("screen.steel_and_honor.menu.flag.button")
@@ -398,7 +388,14 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         placeholderKey: String,
         type: SuggestionType? = null
     ): TextFieldWidget {
-        val field = TextFieldWidget(textRenderer, x, y, width, 20, Text.translatable(placeholderKey))
+        val field = TextFieldWidget(
+            textRenderer,
+            x,
+            y,
+            width,
+            20,
+            Text.translatable(placeholderKey)
+        )
         field.setPlaceholder(Text.translatable(placeholderKey))
         field.setMaxLength(64)
         fields.add(field)
@@ -483,10 +480,10 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
             0xFFE7E7FF.toInt()
         )
 
-        // Render suggestions overlay
-        if (showingSuggestions && currentSuggestionWidget != null) {
-            currentSuggestionWidget?.render(context, mouseX, mouseY)
-        }
+// Render suggestions overlay (3-arg render)
+if (showingSuggestions && currentSuggestionWidget != null) {
+    currentSuggestionWidget?.render(context, mouseX, mouseY)
+}
     }
 
     override fun resize(client: MinecraftClient?, width: Int, height: Int) {
@@ -510,17 +507,14 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
                         return true
                     }
                 }
-
                 GLFW.GLFW_KEY_UP -> {
                     currentSuggestionWidget?.moveSelection(-1)
                     return true
                 }
-
                 GLFW.GLFW_KEY_DOWN -> {
                     currentSuggestionWidget?.moveSelection(1)
                     return true
                 }
-
                 GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
                     val suggestion = currentSuggestionWidget?.getSelectedSuggestion()
                     if (suggestion != null) {
@@ -530,7 +524,6 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
                         return true
                     }
                 }
-
                 GLFW.GLFW_KEY_ESCAPE -> {
                     hideSuggestions()
                     return true
@@ -637,7 +630,7 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 
     private fun drawContentPanel(context: DrawContext) {
         val left = panelLeft()
-        the top = panelTop()
+        val top = panelTop()
         val right = left + panelWidth()
         val bottom = top + panelHeight()
         val headerBottom = top + HEADER_HEIGHT
@@ -647,20 +640,25 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         val innerTop = top + 3
         val innerBottom = bottom - 3
 
-        // drop shadow
         context.fill(left - 4, top - 4, right + 4, bottom + 4, 0x60000000.toInt())
-        // outer frame
         context.fill(left - 1, top - 1, right + 1, bottom + 1, 0xFF08080B.toInt())
         context.fill(left, top, right, bottom, 0xFF12121A.toInt())
-        // inner body
         context.fill(innerLeft, innerTop, innerRight, innerBottom, 0xFF191A24.toInt())
-        // header/backdrop
         context.fill(innerLeft + 2, innerTop + 2, innerRight - 2, headerBottom, 0xFF232538.toInt())
-        // transition band
-        context.fill(innerLeft + 2, headerBottom, innerRight - 2, contentTop - 2, 0xFF1C1E2C.toInt())
-        // content area
-        context.fill(innerLeft + 2, contentTop - 2, innerRight - 2, innerBottom - 2, 0xFF141620.toInt())
-        // accent line separating header and content
+        context.fill(
+            innerLeft + 2,
+            headerBottom,
+            innerRight - 2,
+            contentTop - 2,
+            0xFF1C1E2C.toInt()
+        )
+        context.fill(
+            innerLeft + 2,
+            contentTop - 2,
+            innerRight - 2,
+            innerBottom - 2,
+            0xFF141620.toInt()
+        )
         context.fill(innerLeft + 4, contentTop - 3, innerRight - 4, contentTop - 2, ACCENT_LIGHT)
         context.fill(innerLeft + 4, contentTop - 2, innerRight - 4, contentTop - 1, ACCENT_DARK)
 
@@ -702,7 +700,8 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 
     private fun paragraphStartY(): Int = contentTop() + PARAGRAPH_TOP_PADDING
     private fun paragraphsBottom(): Int = paragraphStartY() + paragraphPixelHeight
-    private fun controlBaseY(): Int = max(paragraphsBottom(), contentTop() + MIN_CONTROL_START_OFFSET)
+    private fun controlBaseY(): Int =
+        max(paragraphsBottom(), contentTop() + MIN_CONTROL_START_OFFSET)
     private fun sectionTop(): Int = controlBaseY() + SECTION_PARAGRAPH_GAP
     private fun contentTop(): Int = panelTop() + CONTENT_TOP_PADDING
     private fun contentBottom(): Int = panelTop() + panelHeight() - CONTENT_BOTTOM_PADDING
@@ -747,7 +746,6 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
         if (showingSuggestions && currentSuggestionWidget != null &&
             currentSuggestionWidget!!.isMouseOver(mouseX, mouseY)
         ) {
-            // Let the suggestion widget handle its own scrolling if needed
             return true
         }
 
@@ -788,12 +786,13 @@ class KingdomMenuScreen : Screen(Text.translatable("screen.steel_and_honor.menu.
 enum class MenuPage(val titleKey: String, val navKey: String) {
     HOME("screen.steel_and_honor.menu.home.title", "screen.steel_and_honor.menu.nav.home"),
     STATUS("screen.steel_and_honor.menu.status.title", "screen.steel_and_honor.menu.nav.status"),
-    MANAGEMENT("screen.steel_and_honor.menu.management.title", "screen.steel_and_honor.menu.nav.management"),
+    MANAGEMENT(
+        "screen.steel_and_honor.menu.management.title",
+        "screen.steel_and_honor.menu.nav.management"
+    ),
     CITIZENS("screen.steel_and_honor.menu.citizens.title", "screen.steel_and_honor.menu.nav.citizens"),
     WAR("screen.steel_and_honor.menu.war.title", "screen.steel_and_honor.menu.nav.war"),
     HELP("screen.steel_and_honor.menu.help.title", "screen.steel_and_honor.menu.nav.help"),
-
-    // New tab for banner flag management
     FLAG("screen.steel_and_honor.menu.flag.title", "screen.steel_and_honor.menu.nav.flag")
 }
 
@@ -809,12 +808,11 @@ class PulsingButtonWidget(
     private var tick = 0f
 
     override fun renderWidget(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
-        tick += delta * 0.15f
-
+        tick++
         val pulse = ((Math.sin(tick.toDouble()) + 1.0) / 2.0).toFloat()
         val alpha = if (active) (60 + pulse * 60).toInt() else 40
-
         val color = (alpha shl 24) or 0xFFAA4444.toInt()
+
         context.fill(x - 2, y - 2, x + width + 2, y + height + 2, color)
 
         super.renderWidget(context, mouseX, mouseY, delta)
@@ -861,3 +859,4 @@ class SurrenderConfirmScreen(private val parent: Screen) :
 
     override fun shouldPause() = false
 }
+

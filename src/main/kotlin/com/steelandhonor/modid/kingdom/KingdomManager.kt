@@ -939,6 +939,12 @@ object KingdomManager {
         return kingdom.roleOf(playerId)
     }
 
+    fun isLeader(uuid: UUID): Boolean {
+    val ownerId = memberLookup[uuid] ?: return false
+    val kingdom = kingdoms[ownerId] ?: return false
+    return kingdom.roleOf(uuid) == KingdomRole.LEADER
+}
+
     fun statusTextFor(playerId: UUID): Text {
         val owner = memberLookup[playerId]
             ?: return Text.translatable("command.steel_and_honor.kingdom.status.unaligned")
@@ -951,73 +957,73 @@ object KingdomManager {
     // KILL SCORING
     // ------------------------------
 
-fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
-    val killerOwner = memberLookup[killer.uuid] ?: return
-    val victimOwner = memberLookup[victim.uuid] ?: return
-    if (killerOwner == victimOwner) return
+    fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
+        val killerOwner = memberLookup[killer.uuid] ?: return
+        val victimOwner = memberLookup[victim.uuid] ?: return
+        if (killerOwner == victimOwner) return
 
-    val war = wars.firstOrNull { it.includes(killerOwner) && it.includes(victimOwner) } ?: return
-    val killerSide = war.sideOf(killerOwner) ?: return
-    val victimSide = war.sideOf(victimOwner) ?: return
-    if (killerSide == victimSide) return
+        val war = wars.firstOrNull { it.includes(killerOwner) && it.includes(victimOwner) } ?: return
+        val killerSide = war.sideOf(killerOwner) ?: return
+        val victimSide = war.sideOf(victimOwner) ?: return
+        if (killerSide == victimSide) return
 
-    val now = killer.server.overworld.time
-    // Don't count kills during prep time
-    if (war.prepTimeRemaining(now) > 0L) return
+        val now = killer.server.overworld.time
+        // Don't count kills during prep time
+        if (war.prepTimeRemaining(now) > 0L) return
 
-    val victimRole = getRole(victim.uuid)
-    // Citizens still do not count at all
-    if (victimRole == KingdomRole.CITIZEN) return
+        val victimRole = getRole(victim.uuid)
+        // Citizens still do not count at all
+        if (victimRole == KingdomRole.CITIZEN) return
 
-    val points = when (victimRole) {
-        KingdomRole.MILITARY -> {
-            if (killerSide == WarSide.ATTACKER) {
-                war.attackerMilitaryKills++
-            } else {
-                war.defenderMilitaryKills++
+        val points = when (victimRole) {
+            KingdomRole.MILITARY -> {
+                if (killerSide == WarSide.ATTACKER) {
+                    war.attackerMilitaryKills++
+                } else {
+                    war.defenderMilitaryKills++
+                }
+                25
             }
-            25
-        }
-        KingdomRole.POLITICIAN -> {
-            if (killerSide == WarSide.ATTACKER) {
-                war.attackerPoliticianKills++
-            } else {
-                war.defenderPoliticianKills++
+            KingdomRole.POLITICIAN -> {
+                if (killerSide == WarSide.ATTACKER) {
+                    war.attackerPoliticianKills++
+                } else {
+                    war.defenderPoliticianKills++
+                }
+                50
             }
-            50
-        }
-        KingdomRole.OFFICER -> {
-            if (killerSide == WarSide.ATTACKER) {
-                war.attackerOfficerKills++
-            } else {
-                war.defenderOfficerKills++
+            KingdomRole.OFFICER -> {
+                if (killerSide == WarSide.ATTACKER) {
+                    war.attackerOfficerKills++
+                } else {
+                    war.defenderOfficerKills++
+                }
+                150
             }
-            150
-        }
-        KingdomRole.LEADER -> {
-            if (killerSide == WarSide.ATTACKER) {
-                war.attackerLeaderKills++
-            } else {
-                war.defenderLeaderKills++
+            KingdomRole.LEADER -> {
+                if (killerSide == WarSide.ATTACKER) {
+                    war.attackerLeaderKills++
+                } else {
+                    war.defenderLeaderKills++
+                }
+                500
             }
-            500
+            else -> 0 // no score, no tracking
         }
-        else -> 0 // no score, no tracking
+
+        if (points <= 0) return
+
+        // Total kill count used for the end-of-war screen (no score tied to this directly)
+        war.incrementKill(killerSide)
+
+        // Apply score for this kill
+        when (killerSide) {
+            WarSide.ATTACKER -> war.attackerScore += points
+            WarSide.DEFENDER -> war.defenderScore += points
+        }
+
+        dirty = true
     }
-
-    if (points <= 0) return
-
-    // Total kill count used for the end-of-war screen (no score tied to this directly)
-    war.incrementKill(killerSide)
-
-    // Apply score for this kill
-    when (killerSide) {
-        WarSide.ATTACKER -> war.attackerScore += points
-        WarSide.DEFENDER -> war.defenderScore += points
-    }
-
-    dirty = true
-}
 
     // ------------------------------
     // NAME SANITIZATION / HELPERS
@@ -1037,7 +1043,7 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
         return name
     }
 
-        /**
+    /**
      * Sends the final war result to all participants so the client can:
      * - play horn + particles + title for ~5s
      * - then open the WarResultScreen.
@@ -1099,7 +1105,8 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
         return wars.any { it.matches(first, second) }
     }
 
-    private fun isInWar(owner: UUID): Boolean {
+    // Public so GUI/commands can call KingdomManager.isInWar(uuid)
+    fun isInWar(owner: UUID): Boolean {
         return wars.any { it.includes(owner) }
     }
 
@@ -1445,158 +1452,158 @@ fun recordKill(killer: ServerPlayerEntity, victim: ServerPlayerEntity) {
         dirty = true
     }
 
-private fun broadcastWarBreakdown(
-    server: MinecraftServer,
-    war: WarState,
-    attackerName: String,
-    defenderName: String
-) {
-    val lines = mutableListOf<Text>()
+    private fun broadcastWarBreakdown(
+        server: MinecraftServer,
+        war: WarState,
+        attackerName: String,
+        defenderName: String
+    ) {
+        val lines = mutableListOf<Text>()
 
-    // Header
-    lines.add(Text.literal("──── War Results: $attackerName vs $defenderName ────"))
+        // Header
+        lines.add(Text.literal("──── War Results: $attackerName vs $defenderName ────"))
 
-    // Attacker breakdown
-    lines.addAll(
-        buildSideBreakdown(
-            label = "Attacker",
-            kingdomName = attackerName,
-            totalScore = war.attackerScore,
-            militaryKills = war.attackerMilitaryKills,
-            politicianKills = war.attackerPoliticianKills,
-            officerKills = war.attackerOfficerKills,
-            leaderKills = war.attackerLeaderKills,
-            cityCaptures = war.attackerCityCaptures
+        // Attacker breakdown
+        lines.addAll(
+            buildSideBreakdown(
+                label = "Attacker",
+                kingdomName = attackerName,
+                totalScore = war.attackerScore,
+                militaryKills = war.attackerMilitaryKills,
+                politicianKills = war.attackerPoliticianKills,
+                officerKills = war.attackerOfficerKills,
+                leaderKills = war.attackerLeaderKills,
+                cityCaptures = war.attackerCityCaptures
+            )
         )
-    )
 
-    lines.add(Text.literal(""))
-
-    // Defender breakdown
-    lines.addAll(
-        buildSideBreakdown(
-            label = "Defender",
-            kingdomName = defenderName,
-            totalScore = war.defenderScore,
-            militaryKills = war.defenderMilitaryKills,
-            politicianKills = war.defenderPoliticianKills,
-            officerKills = war.defenderOfficerKills,
-            leaderKills = war.defenderLeaderKills,
-            cityCaptures = war.defenderCityCaptures
-        )
-    )
-
-    // Allies (names only, as requested)
-    val attackerAlliesNames = war.attackerAllies
-        .mapNotNull { kingdoms[it]?.name }
-        .sorted()
-
-    val defenderAlliesNames = war.defenderAllies
-        .mapNotNull { kingdoms[it]?.name }
-        .sorted()
-
-    if (attackerAlliesNames.isNotEmpty() || defenderAlliesNames.isNotEmpty()) {
         lines.add(Text.literal(""))
-        if (attackerAlliesNames.isNotEmpty()) {
-            lines.add(Text.literal("Attacker Allies: ${attackerAlliesNames.joinToString(", ")}"))
+
+        // Defender breakdown
+        lines.addAll(
+            buildSideBreakdown(
+                label = "Defender",
+                kingdomName = defenderName,
+                totalScore = war.defenderScore,
+                militaryKills = war.defenderMilitaryKills,
+                politicianKills = war.defenderPoliticianKills,
+                officerKills = war.defenderOfficerKills,
+                leaderKills = war.defenderLeaderKills,
+                cityCaptures = war.defenderCityCaptures
+            )
+        )
+
+        // Allies (names only, as requested)
+        val attackerAlliesNames = war.attackerAllies
+            .mapNotNull { kingdoms[it]?.name }
+            .sorted()
+
+        val defenderAlliesNames = war.defenderAllies
+            .mapNotNull { kingdoms[it]?.name }
+            .sorted()
+
+        if (attackerAlliesNames.isNotEmpty() || defenderAlliesNames.isNotEmpty()) {
+            lines.add(Text.literal(""))
+            if (attackerAlliesNames.isNotEmpty()) {
+                lines.add(Text.literal("Attacker Allies: ${attackerAlliesNames.joinToString(", ")}"))
+            }
+            if (defenderAlliesNames.isNotEmpty()) {
+                lines.add(Text.literal("Defender Allies: ${defenderAlliesNames.joinToString(", ")}"))
+            }
         }
-        if (defenderAlliesNames.isNotEmpty()) {
-            lines.add(Text.literal("Defender Allies: ${defenderAlliesNames.joinToString(", ")}"))
+
+        // Send to everyone involved in the war (attacker, defender, all allies)
+        val allOwners = mutableSetOf<UUID>()
+        allOwners.add(war.attacker)
+        allOwners.add(war.defender)
+        allOwners.addAll(war.attackerAllies)
+        allOwners.addAll(war.defenderAllies)
+
+        allOwners.forEach { ownerId ->
+            val kingdom = kingdoms[ownerId] ?: return@forEach
+            kingdom.members.forEach { memberId ->
+                val player = server.playerManager.getPlayer(memberId) ?: return@forEach
+                lines.forEach { line -> player.sendMessage(line, false) }
+            }
         }
     }
 
-    // Send to everyone involved in the war (attacker, defender, all allies)
-    val allOwners = mutableSetOf<UUID>()
-    allOwners.add(war.attacker)
-    allOwners.add(war.defender)
-    allOwners.addAll(war.attackerAllies)
-    allOwners.addAll(war.defenderAllies)
+    private fun buildSideBreakdown(
+        label: String,
+        kingdomName: String,
+        totalScore: Int,
+        militaryKills: Int,
+        politicianKills: Int,
+        officerKills: Int,
+        leaderKills: Int,
+        cityCaptures: Int
+    ): List<Text> {
+        val lines = mutableListOf<Text>()
 
-    allOwners.forEach { ownerId ->
-        val kingdom = kingdoms[ownerId] ?: return@forEach
-        kingdom.members.forEach { memberId ->
-            val player = server.playerManager.getPlayer(memberId) ?: return@forEach
-            lines.forEach { line -> player.sendMessage(line, false) }
+        lines.add(Text.literal("$label: $kingdomName — Total $totalScore points"))
+
+        fun line(name: String, count: Int, pointsPer: Int): Text {
+            val pts = count * pointsPer
+            return Text.literal("• $name (x$count)  -  +$pts points")
         }
-    }
-}
 
-private fun buildSideBreakdown(
-    label: String,
-    kingdomName: String,
-    totalScore: Int,
-    militaryKills: Int,
-    politicianKills: Int,
-    officerKills: Int,
-    leaderKills: Int,
-    cityCaptures: Int
-): List<Text> {
-    val lines = mutableListOf<Text>()
+        // Always show rows, even if x0
+        lines.add(line("Military Kills", militaryKills, 25))
+        lines.add(line("Politician Kills", politicianKills, 50))
+        lines.add(line("Officer Kills", officerKills, 150))
+        lines.add(line("Leader Kills", leaderKills, 500))
 
-    lines.add(Text.literal("$label: $kingdomName — Total $totalScore points"))
+        val cityPts = cityCaptures * CITY_CAPTURE_POINTS
+        lines.add(Text.literal("• City Captures (x$cityCaptures)  -  +$cityPts points"))
 
-    fun line(name: String, count: Int, pointsPer: Int): Text {
-        val pts = count * pointsPer
-        return Text.literal("• $name (x$count)  -  +$pts points")
+        return lines
     }
 
-    // Always show rows, even if x0, as you requested
-    lines.add(line("Military Kills", militaryKills, 25))
-    lines.add(line("Politician Kills", politicianKills, 50))
-    lines.add(line("Officer Kills", officerKills, 150))
-    lines.add(line("Leader Kills", leaderKills, 500))
+    private fun sendWarHudUpdates(server: MinecraftServer) {
+        val now = server.overworld.time
+        val players = server.playerManager.playerList
+        if (players.isEmpty()) return
 
-    val cityPts = cityCaptures * CITY_CAPTURE_POINTS
-    lines.add(Text.literal("• City Captures (x$cityCaptures)  -  +$cityPts points"))
+        players.forEach { player ->
+            val owner = memberLookup[player.uuid] ?: return@forEach
 
-    return lines
-}
+            val payloadWars = wars
+                .filter { it.includes(owner) }
+                .mapNotNull { war ->
+                    val attackerData = kingdoms[war.attacker]
+                    val defenderData = kingdoms[war.defender]
+                    if (attackerData == null || defenderData == null) return@mapNotNull null
 
-private fun sendWarHudUpdates(server: MinecraftServer) {
-    val now = server.overworld.time
-    val players = server.playerManager.playerList
-    if (players.isEmpty()) return
+                    val warSeconds = (war.warTimeRemaining(now) / 20L).coerceAtLeast(0)
+                    val prepSeconds = (war.prepTimeRemaining(now) / 20L).coerceAtLeast(0)
 
-    players.forEach { player ->
-        val owner = memberLookup[player.uuid] ?: return@forEach
+                    // Find the currently active city for this war
+                    val activeCity = war.cities.firstOrNull { city ->
+                        city.capturingSide != null && city.capturedBy == null
+                    }
 
-        val payloadWars = wars
-            .filter { it.includes(owner) }
-            .mapNotNull { war ->
-                val attackerData = kingdoms[war.attacker]
-                val defenderData = kingdoms[war.defender]
-                if (attackerData == null || defenderData == null) return@mapNotNull null
+                    val activeCityName = activeCity?.name ?: ""
+                    val captureProgress = (activeCity?.progress ?: 0.0)
+                        .toFloat()
+                        .coerceIn(0f, 1f) // HUD expects 0.0–1.0
 
-                val warSeconds = (war.warTimeRemaining(now) / 20L).coerceAtLeast(0)
-                val prepSeconds = (war.prepTimeRemaining(now) / 20L).coerceAtLeast(0)
-
-                // Find the currently active city for this war
-                val activeCity = war.cities.firstOrNull { city ->
-                    city.capturingSide != null && city.capturedBy == null
+                    KingdomNetworking.WarStatusEntry(
+                        attackerName = attackerData.name,
+                        defenderName = defenderData.name,
+                        attackerColorId = attackerData.color.id,
+                        defenderColorId = defenderData.color.id,
+                        secondsRemaining = warSeconds.toInt(),
+                        prepSecondsRemaining = prepSeconds.toInt(),
+                        attackerScore = war.attackerScore,
+                        defenderScore = war.defenderScore,
+                        activeCityName = activeCityName,
+                        captureProgress = captureProgress
+                    )
                 }
 
-                val activeCityName = activeCity?.name ?: ""
-                val captureProgress = (activeCity?.progress ?: 0.0)
-                    .toFloat()
-                    .coerceIn(0f, 1f) // HUD expects 0.0–1.0
-
-KingdomNetworking.WarStatusEntry(
-    attackerName = attackerData.name,
-    defenderName = defenderData.name,
-    attackerColorId = attackerData.color.id,
-    defenderColorId = defenderData.color.id,
-    secondsRemaining = warSeconds.toInt(),
-    prepSecondsRemaining = prepSeconds.toInt(),
-    attackerScore = war.attackerScore,
-    defenderScore = war.defenderScore,
-    activeCityName = activeCityName,
-    captureProgress = captureProgress
-)
-            }
-
-        KingdomNetworking.sendWarStatus(player, payloadWars)
+            KingdomNetworking.sendWarStatus(player, payloadWars)
+        }
     }
-}
 
     private fun allowedClaimZones(memberCount: Int): Int {
         return when {
@@ -1898,14 +1905,3 @@ private data class ClaimedArea(
             maxChunkZ >= other.minChunkZ
     }
 }
-
-fun isInWar(owner: UUID): Boolean {
-    return WarManager.getWars().any { war ->
-        war.includes(owner)
-    }
-}
-
-fun isInWar(uuid: UUID): Boolean {
-    return wars.any { it.includes(uuid) }
-}
-

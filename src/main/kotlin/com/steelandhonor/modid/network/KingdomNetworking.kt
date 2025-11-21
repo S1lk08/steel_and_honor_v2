@@ -149,18 +149,18 @@ object KingdomNetworking {
     // WAR HUD STATUS
     // -------------------------------------------------
 
-data class WarStatusEntry(
-    val attackerName: String,
-    val defenderName: String,
-    val attackerColorId: Int,
-    val defenderColorId: Int,
-    val secondsRemaining: Int,
-    val prepSecondsRemaining: Int,
-    val attackerScore: Int,
-    val defenderScore: Int,
-    val activeCityName: String,
-    val captureProgress: Float
-)
+    data class WarStatusEntry(
+        val attackerName: String,
+        val defenderName: String,
+        val attackerColorId: Int,
+        val defenderColorId: Int,
+        val secondsRemaining: Int,
+        val prepSecondsRemaining: Int,
+        val attackerScore: Int,
+        val defenderScore: Int,
+        val activeCityName: String,
+        val captureProgress: Float
+    )
 
     data class SyncWarStatusPayload(val wars: List<WarStatusEntry>) : CustomPayload {
         override fun getId(): CustomPayload.Id<SyncWarStatusPayload> = ID
@@ -169,46 +169,44 @@ data class WarStatusEntry(
             val ID: CustomPayload.Id<SyncWarStatusPayload> =
                 CustomPayload.Id(Identifier.of(SteelAndHonorMod.MOD_ID, "sync_war_status"))
 
-val CODEC: PacketCodec<PacketByteBuf, SyncWarStatusPayload> =
-    object : PacketCodec<PacketByteBuf, SyncWarStatusPayload> {
+            val CODEC: PacketCodec<PacketByteBuf, SyncWarStatusPayload> =
+                object : PacketCodec<PacketByteBuf, SyncWarStatusPayload> {
 
-        override fun encode(buf: PacketByteBuf, value: SyncWarStatusPayload) {
-            buf.writeVarInt(value.wars.size)
-            value.wars.forEach { war ->
-                buf.writeString(war.attackerName, 64)
-                buf.writeString(war.defenderName, 64)
-                buf.writeVarInt(war.attackerColorId)
-                buf.writeVarInt(war.defenderColorId)
-                buf.writeVarInt(war.secondsRemaining)
-                buf.writeVarInt(war.prepSecondsRemaining)
-                buf.writeVarInt(war.attackerScore)
-                buf.writeVarInt(war.defenderScore)
-                buf.writeString(war.activeCityName, 64)
-                buf.writeFloat(war.captureProgress)
-            }
-        }
+                    override fun encode(buf: PacketByteBuf, value: SyncWarStatusPayload) {
+                        buf.writeVarInt(value.wars.size)
+                        value.wars.forEach { war ->
+                            buf.writeString(war.attackerName, 64)
+                            buf.writeString(war.defenderName, 64)
+                            buf.writeVarInt(war.attackerColorId)
+                            buf.writeVarInt(war.defenderColorId)
+                            buf.writeVarInt(war.secondsRemaining)
+                            buf.writeVarInt(war.prepSecondsRemaining)
+                            buf.writeVarInt(war.attackerScore)
+                            buf.writeVarInt(war.defenderScore)
+                            buf.writeString(war.activeCityName, 64)
+                            buf.writeFloat(war.captureProgress)
+                        }
+                    }
 
-override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
-    val size = buf.readVarInt()
-    val wars = MutableList(size) {
-        WarStatusEntry(
-            attackerName = buf.readString(64),
-            defenderName = buf.readString(64),
-            attackerColorId = buf.readVarInt(),
-            defenderColorId = buf.readVarInt(),
-            secondsRemaining = buf.readVarInt(),
-            prepSecondsRemaining = buf.readVarInt(),
-            attackerScore = buf.readVarInt(),
-            defenderScore = buf.readVarInt(),
-            activeCityName = buf.readString(64),
-            captureProgress = buf.readFloat()
-        )
-    }
-    return SyncWarStatusPayload(wars)
-}
-
-    }
-
+                    override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
+                        val size = buf.readVarInt()
+                        val wars = MutableList(size) {
+                            WarStatusEntry(
+                                attackerName = buf.readString(64),
+                                defenderName = buf.readString(64),
+                                attackerColorId = buf.readVarInt(),
+                                defenderColorId = buf.readVarInt(),
+                                secondsRemaining = buf.readVarInt(),
+                                prepSecondsRemaining = buf.readVarInt(),
+                                attackerScore = buf.readVarInt(),
+                                defenderScore = buf.readVarInt(),
+                                activeCityName = buf.readString(64),
+                                captureProgress = buf.readFloat()
+                            )
+                        }
+                        return SyncWarStatusPayload(wars)
+                    }
+                }
         }
     }
 
@@ -346,7 +344,4 @@ override fun decode(buf: PacketByteBuf): SyncWarStatusPayload {
         val payload = SyncWarResultPayload(result)
         ServerPlayNetworking.send(player, payload)
     }
-
-    fun getWars(): List<War> = wars.toList()
-
 }
